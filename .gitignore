@@ -19,7 +19,8 @@
 packrat/lib*/
 
 # Data
-data
+data/*
+!data/.gitkeep
 
 # produced vignettes
 vignettes/*.html

@@ -1,0 +1,204 @@
+---
+title: "Structuring around exemplars - ESIDA workshop"
+author: "Joris Falip"
+date: "12/2018"
+output: html_document
+params:
+   data_str: "residential"
+   k: 124
+   threshold: 10
+   range: 2
+   nb_cpus: 2
+editor_options: 
+  chunk_output_type: console
+---
+
+# Setup
+
+This section highlights how to install the needed packages using two methods, then download et read the datasets used
+
+### Packages
+
+You can install every needed package by hand, or run one of the two following chunks. Those two chunks won't run by default, you need to change _eval_ to _TRUE_.
+
+##### Checkpoint
+
+This package is the best solution for reproducibility. It will install every needed package in the same version that was available on the day the analysis was done. This process takes a long time.
+Before running this chunk, you need to install the _checkpoint_ package then create a _.checkpoint_ folder inside the folder containing this Rmarkdown file.
+
+```{r packages-checkpoint, eval=FALSE}
+library(checkpoint)
+checkpoint("2018-12-17")
+```
+
+##### Automagic
+
+This package installs (using _install.packages()_) the missing packages, avoiding the hassle of installing packages one by one.
+Before running this chunk, you need to install the _automagic_ package.
+
+```{r packages-automagic, eval=FALSE}
+library(automagic)
+automagic()
+```
+
+We can now load the required packages and the proposed structuration algorithm.
+
+```{r setup}
+library(fields)
+library(foreach)
+library(doParallel)
+library(magrittr)
+library(ggpubr)
+library(ggplot2)
+library(readxl)
+library(readr)
+library(purrr)
+library(igraph)
+
+source("structuration.R")
+```
+
+We then download the 
+
+```{r datasets-download}
+if (!file.exists("./data/Residential-Building-Data-Set.xlsx")) {
+  download.file("https://archive.ics.uci.edu/ml/machine-learning-databases/00437/Residential-Building-Data-Set.xlsx", "./data/Residential-Building-Data-Set.xlsx")
+}
+
+if (!file.exists("./data/CommViolPredUnnormalizedData.txt")) {
+  download.file("http://archive.ics.uci.edu/ml/machine-learning-databases/00211/CommViolPredUnnormalizedData.txt", "./data/CommViolPredUnnormalizedData.txt")
+}
+```
+
+```{r load-studied-data}
+if (params$data_str == "residential") {
+  ### RESIDENTIAL ###
+  # https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
+  
+  housing <- read_excel("data/Residential-Building-Data-Set.xlsx", 
+                        sheet = "Data", col_names = FALSE, col_types = c("blank", 
+                                                                         "blank", "blank", "blank", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric", "numeric", 
+                                                                         "numeric", "numeric"), skip = 2)
+  
+  data <- as.matrix(housing)
+  soluce <- data[ ,105]
+  data <- data[ ,-105]
+  data <- data[ ,-104]
+  
+  rm(housing)
+}
+
+if (params$data_str == "communities") {
+  ### CRIME ###
+  # http://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
+  
+  crime <- read_csv("data/CommViolPredUnnormalizedData.txt", col_names = FALSE, na = "?")
+  
+  data <- crime[ ,-c(1:5)]
+  data <- as.matrix(data)
+  soluce <- crime$X131
+  data <- data[ ,1:124]
+  colToKeep <- colSums(is.na(data)) > 0
+  data <- data[ ,!colToKeep]
+  
+  rm(crime,colToKeep)
+}
+
+if (params$data_str == "norm") {
+  ### SYNTHETHIC ###
+  
+  data <- matrix(0, ncol = 1000, nrow = 300)
+  set.seed(2019)
+  for (norm in 1:800) {
+    data[, norm] <- rnorm(300, mean = 0, sd = 1)
+  }
+  for (unif in 801:1000) {
+    data[, unif] <- runif(300, 0, 1)
+  }
+}
+```
+
+# Analysis
+
+
+```{r prediction-joris}
+results_exemplars <- structuration(data, params$k, params$threshold)
+exemplars_graph <- make_graph(as.vector(rbind(1:length(results_exemplars), results_exemplars)))
+plot(exemplars_graph, vertex.size = 3, edge.arrow.size = 0.1)
+
+
+```
+
+
+
+```{r nearest-minkowski}
+distance_matrix <- as.matrix(dist(scale(data), method = "minkowski", p = 0.75))
+results_minkowski <- integer(dim(data)[1])
+diag(distance_matrix) <- 9999999
+for (elem in 1:dim(data)[1]) {
+  results_minkowski[elem] <- which(distance_matrix[elem,] == min(distance_matrix[elem,]))
+}
+
+mink_graph <- make_graph(as.vector(rbind(1:dim(data)[1], results_minkowski)))
+plot(mink_graph, vertex.size = 3, edge.arrow.size = 0.1, vertex.label = "")
+components(mink_graph)$no
+mean(components(mink_graph)$csize)
+mean(unlist(lapply(decompose(mink_graph), diameter)))
+```
+
+
+
+```{r evolution-composantes}
+registerDoParallel(params$nb_cpus)
+
+composantes <- foreach(i = 1:params$range) %dopar% {
+  results_components <- structuration(data, i, params$threshold)
+  
+  resgraph <- make_graph(as.vector(rbind(seq_len(dim(data)[1]), results_components)))
+  return(components(resgraph)$no)
+}
+
+composantes <- unlist(composantes)
+df <- as.data.frame(composantes)
+
+composantes_graphs <- ggplot(df, aes(1:params$range)) + 
+  geom_line(aes(y = composantes, color = "joris")) +
+  labs(x = "Input parameter K", y = "Number of connected components")
+composantes_graphs + theme_pubr() + grids(linetype = "dashed") + theme(legend.position = "none")
+
+stopImplicitCluster()
+```

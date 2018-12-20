@@ -1,14 +1,5 @@
 # bidouilles
 library(igraph)
-
-synthetic <- matrix(0, ncol = 1000, nrow = 300)
-set.seed(2019)
-for (norm in 1:800) {
-  synthetic[, norm] <- rnorm(300, mean = 0, sd = 1)
-}
-for (unif in 801:1000) {
-  synthetic[, unif] <- runif(300, 0, 1)
-}
   
 structuration(synthetic, 100, 10) -> babu
 babug <- make_graph(as.vector(rbind(1:length(babu), babu)))

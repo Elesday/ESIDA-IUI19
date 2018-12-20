@@ -4,6 +4,7 @@ agreg <- function(rangs, threshold) {
     return(sum(points))
 }
 
+# proposed structuration algorithm
 structuration <- function(inputData, neighborhoodSize, threshold) {
   
   num_elements <- dim(inputData)[1]
@@ -25,12 +26,12 @@ structuration <- function(inputData, neighborhoodSize, threshold) {
     }
     
     for (element in seq_len(num_elements)) {
-      trueNeighbors <- inputData[, dimension] - inputData[element, dimension]
-      trueNeighbors <- abs(trueNeighbors)
-      trueNeighbors <- order(trueNeighbors)
-      trueNeighbors <- trueNeighbors[trueNeighbors != element]
-      trueNeighbors <- trueNeighbors[seq_len(neighborhoodSize)]
-      scores[[element]][trueNeighbors] <- scores[[element]][trueNeighbors] + dimensionScores[trueNeighbors]
+      neighbors <- inputData[, dimension] - inputData[element, dimension]
+      neighbors <- abs(neighbors)
+      neighbors <- order(neighbors)
+      neighbors <- neighbors[neighbors != element]
+      neighbors <- neighbors[seq_len(neighborhoodSize)]
+      scores[[element]][neighbors] <- scores[[element]][neighbors] + dimensionScores[neighbors]
     }
   }
   
@@ -38,6 +39,7 @@ structuration <- function(inputData, neighborhoodSize, threshold) {
   
 }
 
+# this algorithm details the final score attributed by an element to another element
 detailing <- function(inputData, neighborhoodSize, threshold, start, end) {
   
   num_elements <- dim(inputData)[1]
@@ -61,14 +63,14 @@ detailing <- function(inputData, neighborhoodSize, threshold, start, end) {
     }
     
     for (element in seq_len(num_elements)) {
-      trueNeighbors <- inputData[, dimension] - inputData[element, dimension]
-      trueNeighbors <- abs(trueNeighbors)
-      trueNeighbors <- order(trueNeighbors)
-      trueNeighbors <- trueNeighbors[trueNeighbors != element]
-      trueNeighbors <- trueNeighbors[seq_len(neighborhoodSize)]
-      scores[[element]][trueNeighbors] <- scores[[element]][trueNeighbors] + dimensionScores[trueNeighbors]
+      neighbors <- inputData[, dimension] - inputData[element, dimension]
+      neighbors <- abs(neighbors)
+      neighbors <- order(neighbors)
+      neighbors <- neighbors[neighbors != element]
+      neighbors <- neighbors[seq_len(neighborhoodSize)]
+      scores[[element]][neighbors] <- scores[[element]][neighbors] + dimensionScores[neighbors]
       
-      if(element == start && end %in% trueNeighbors) {
+      if(element == start && end %in% neighbors) {
         results[dimension] <- dimensionScores[end]
       } else if(element == start) {
         results[dimension] <- 0
