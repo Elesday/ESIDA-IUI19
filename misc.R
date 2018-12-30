@@ -1,6 +1,3 @@
-# bidouilles
-library(igraph)
-  
 structuration(synthetic, 100, 10) -> babu
 babug <- make_graph(as.vector(rbind(1:length(babu), babu)))
 plot(babug, vertex.size = 3, edge.arrow.size = 0.1, vertex.label = "")

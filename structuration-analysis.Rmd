@@ -4,10 +4,10 @@ author: "Joris Falip"
 date: "12/2018"
 output: html_document
 params:
-   data_str: "residential"
+   dataset: "residential"
    k: 124
    threshold: 10
-   range: 2
+   range: 50
    nb_cpus: 2
 editor_options: 
   chunk_output_type: console
@@ -34,11 +34,11 @@ checkpoint("2018-12-17")
 ##### Automagic
 
 This package installs (using _install.packages()_) the missing packages, avoiding the hassle of installing packages one by one.
-Before running this chunk, you need to install the _automagic_ package.
+Before running this chunk, you need to install the _automagic_ package and set your current working directory to the folder containing this Rmd file.
 
 ```{r packages-automagic, eval=FALSE}
 library(automagic)
-automagic()
+#automagic()
 ```
 
 We can now load the required packages and the proposed structuration algorithm.
@@ -54,11 +54,12 @@ library(readxl)
 library(readr)
 library(purrr)
 library(igraph)
+library(igraph)
 
 source("structuration.R")
 ```
 
-We then download the 
+We then download the two UCI datasets if they are not already in the data folder.
 
 ```{r datasets-download}
 if (!file.exists("./data/Residential-Building-Data-Set.xlsx")) {
@@ -70,8 +71,10 @@ if (!file.exists("./data/CommViolPredUnnormalizedData.txt")) {
 }
 ```
 
+We load the two UCI datasets and generate the synthethic dataset.
+
 ```{r load-studied-data}
-if (params$data_str == "residential") {
+if (params$dataset == "residential") {
   ### RESIDENTIAL ###
   # https://archive.ics.uci.edu/ml/datasets/Residential+Building+Data+Set
   
@@ -122,7 +125,7 @@ if (params$data_str == "residential") {
   rm(housing)
 }
 
-if (params$data_str == "communities") {
+if (params$dataset == "communities") {
   ### CRIME ###
   # http://archive.ics.uci.edu/ml/datasets/Communities+and+Crime+Unnormalized
   
@@ -138,7 +141,7 @@ if (params$data_str == "communities") {
   rm(crime,colToKeep)
 }
 
-if (params$data_str == "norm") {
+if (params$dataset == "norm") {
   ### SYNTHETHIC ###
   
   data <- matrix(0, ncol = 1000, nrow = 300)
@@ -154,16 +157,22 @@ if (params$data_str == "norm") {
 
 # Analysis
 
+To start the analysis, the _dataset_ and _k_ parameters are required, in the header of this Rmd file.
+_dataset_ can take the following values : "residential" for the Residential Building dataset, "communities" for the Communities and Crime dataset, and "norm" for the synthethic dataset using normal distributions and uniform distributions.
+_threshold_ parameter of this script is the threshold _T_ for formula 1 of the article.
+
+The following chunk run the proposed exemplar and structures elements around exemplars. It then displays the structure as a graph, and compute the number of connected components, their size and mean diameter.
 
 ```{r prediction-joris}
 results_exemplars <- structuration(data, params$k, params$threshold)
 exemplars_graph <- make_graph(as.vector(rbind(1:length(results_exemplars), results_exemplars)))
-plot(exemplars_graph, vertex.size = 3, edge.arrow.size = 0.1)
-
-
+plot(exemplars_graph, vertex.size = 3, edge.arrow.size = 0.1, vertex.label = "")
+components(exemplars_graph)$no
+mean(components(exemplars_graph)$csize)
+mean(unlist(lapply(decompose(exemplars_graph), diameter)))
 ```
 
-
+We create a similar structure by linking each element ot its closest neighbor using a minkowski distance of order 0.75. We extract the same information regarding connected components.
 
 ```{r nearest-minkowski}
 distance_matrix <- as.matrix(dist(scale(data), method = "minkowski", p = 0.75))
@@ -180,7 +189,7 @@ mean(components(mink_graph)$csize)
 mean(unlist(lapply(decompose(mink_graph), diameter)))
 ```
 
-
+This chunk generates a chart displaying the number of connected components of the resulting structure, for every value of the input paramter _k_ ranging from 1 to input parameter _range_. This code is executed in a multithreaded fashion, using as many cores as specified by parameter *nb_cpus*.
 
 ```{r evolution-composantes}
 registerDoParallel(params$nb_cpus)
@@ -196,7 +205,7 @@ composantes <- unlist(composantes)
 df <- as.data.frame(composantes)
 
 composantes_graphs <- ggplot(df, aes(1:params$range)) + 
-  geom_line(aes(y = composantes, color = "joris")) +
+  geom_line(aes(y = composantes, color = "")) +
   labs(x = "Input parameter K", y = "Number of connected components")
 composantes_graphs + theme_pubr() + grids(linetype = "dashed") + theme(legend.position = "none")
 

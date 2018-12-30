@@ -39,7 +39,7 @@ structuration <- function(inputData, neighborhoodSize, threshold) {
   
 }
 
-# this algorithm details the final score attributed by an element to another element
+# this version of the algorithm details the final score attributed by an element to another element
 detailing <- function(inputData, neighborhoodSize, threshold, start, end) {
   
   num_elements <- dim(inputData)[1]
