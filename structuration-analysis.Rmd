@@ -189,6 +189,29 @@ mean(components(mink_graph)$csize)
 mean(unlist(lapply(decompose(mink_graph), diameter)))
 ```
 
+Now we can illustrate the algorithm using _Iris_ data.
+
+```{r iris-example}
+data(iris)
+structuration(iris[,1:4], 50, 10) -> results_iris
+size <- 150
+
+d <- data.frame(x = rep(0, size), y = rep(0, size), ex = rep(0, size), ey = rep(0, size))
+d$x <- iris$Sepal.Length
+d$y <- iris$Sepal.Width
+
+for(j in 1:size){
+  d$ex[j] <- d$x[results_iris[j]]
+}
+
+for(j in 1:size){
+  d$ey[j] <- d$y[results_iris[j]]
+}
+
+op <- ggplot() + geom_segment(d, mapping = aes(x = x, y = y, xend = ex, yend = ey)) + geom_point(iris, mapping = aes(x = Sepal.Length, y = Sepal.Width, color = Species)) + labs(x = "Sepal Length", y = "Sepal Width")
+op + theme_pubr() + grids(linetype = "dashed")
+```
+
 This chunk generates a chart displaying the number of connected components of the resulting structure, for every value of the input paramter _k_ ranging from 1 to input parameter _range_. This code is executed in a multithreaded fashion, using as many cores as specified by parameter *nb_cpus*.
 
 ```{r evolution-composantes}
